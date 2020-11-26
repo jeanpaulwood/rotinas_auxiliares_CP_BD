@@ -1,7 +1,13 @@
+
+GO
+
+/****** Object:  UserDefinedFunction [dbo].[retornarIntervalosFuncionario]    Script Date: 26/11/2020 11:18:14 ******/
 SET ANSI_NULLS ON
 GO
+
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 
 -- =============================================
@@ -12,8 +18,7 @@ GO
 ALTER FUNCTION [dbo].[retornarIntervalosFuncionario] 
 (
 	-- Add the parameters for the function here
-	@funcicodigo int,
-	@datajornada datetime,
+	@cartacodigo int,
 	@periodo smallint
 )
 RETURNS 
@@ -30,10 +35,13 @@ BEGIN
 	declare @entprev datetime, @saiprev datetime
 	declare @horarcodigo int
 	declare @contabiliza bit
+	declare @datajornada datetime
+	declare @funcicodigo int
 
 	select 
 	@jornadalivre=cartajornadalivre,
 	@horarcodigo=horarcodigo,
+	@datajornada=cartadatajornada,
 	@funcicodigo=funcicodigo,
 	@s1=carta_realizado_s1,
 	@e2=carta_realizado_e2,
@@ -41,7 +49,7 @@ BEGIN
 	@e3=carta_realizado_e3,
 	@s3=carta_realizado_s3,
 	@e4=carta_realizado_e4 
-	from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada
+	from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo
 
 	set @interval1 = 0
 	set @interval2 = 0
@@ -57,11 +65,11 @@ BEGIN
 			end
 			else
 			begin
-				set @entprev = (select carta_previsto_s1 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
-				set @saiprev = (select carta_previsto_e2 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
-				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_s1,carta_previsto_s1) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
+				set @entprev = (select carta_previsto_s1 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+				set @saiprev = (select carta_previsto_e2 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_s1,carta_previsto_s1) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 				-- ALTERAÇÃO 18/02/2020
-				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_s1,carta_previsto_s1) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
+				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_s1,carta_previsto_s1) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 				-- BKP 18/02/2020
 				--set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_e2,carta_previsto_e2) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 			
@@ -71,8 +79,8 @@ BEGIN
 					set @s1 = @entprev
 				end
 
-				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_e2,carta_previsto_e2) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
-				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_e2,carta_previsto_e2) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
+				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_e2,carta_previsto_e2) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_e2,carta_previsto_e2) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 
 				-- SE O APONTAMENTO REALIZADO ESTIVER DENTRO DA TOLERÂNCIA ANTERIOR E POSTERIOR
 				if (@e2 <= @saiprev and @e2 >= @toleranciaanterior) or (@e2 >= @saiprev and @e2 <= @toleranciaposterior)
@@ -109,11 +117,11 @@ BEGIN
 			end
 			else
 			begin
-				set @entprev = (select carta_previsto_s2 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
-				set @saiprev = (select carta_previsto_e3 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
-				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_s2,carta_previsto_s2) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
+				set @entprev = (select carta_previsto_s2 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+				set @saiprev = (select carta_previsto_e3 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_s2,carta_previsto_s2) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 				-- ALTERAÇÃO 18/02/2020
-				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_s2,carta_previsto_s2) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
+				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_s2,carta_previsto_s2) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 				-- BKP 18/02/2020
 				--set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_e3,carta_previsto_e3) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 			
@@ -123,8 +131,8 @@ BEGIN
 					set @s2 = @entprev
 				end
 
-				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_e3,carta_previsto_e3) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
-				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_e3,carta_previsto_e3) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
+				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_e3,carta_previsto_e3) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_e3,carta_previsto_e3) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 
 				-- SE O APONTAMENTO REALIZADO ESTIVER DENTRO DA TOLERÂNCIA ANTERIOR E POSTERIOR
 				if (@e3 <= @saiprev and @e3 >= @toleranciaanterior) or (@e3 >= @saiprev and @e3 <= @toleranciaposterior)
@@ -161,11 +169,11 @@ BEGIN
 			end
 			else
 			begin
-				set @entprev = (select carta_previsto_s3 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
-				set @saiprev = (select carta_previsto_e4 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
-				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_s3,carta_previsto_s3) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
+				set @entprev = (select carta_previsto_s3 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+				set @saiprev = (select carta_previsto_e4 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_s3,carta_previsto_s3) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 				-- ALTERAÇÃO 18/02/2020
-				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_s3,carta_previsto_s3) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
+				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_s3,carta_previsto_s3) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 				-- BKP 18/02/2020
 				--set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_s3,carta_previsto_s3) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 			
@@ -175,8 +183,8 @@ BEGIN
 					set @s3 = @entprev
 				end
 
-				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_e4,carta_previsto_e4) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
-				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_e4,carta_previsto_e4) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
+				set @toleranciaanterior = (select dateadd(minute,-carta_tolerancia_anterior_e4,carta_previsto_e4) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+				set @toleranciaposterior = (select dateadd(minute,carta_tolerancia_posterior_e4,carta_previsto_e4) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 
 				-- SE O APONTAMENTO REALIZADO ESTIVER DENTRO DA TOLERÂNCIA ANTERIOR E POSTERIOR
 				if (@e4 <= @saiprev and @e4 >= @toleranciaanterior) or (@e4 >= @saiprev and @e4 <= @toleranciaposterior)
@@ -207,3 +215,4 @@ BEGIN
 	RETURN;
 END
 GO
+
