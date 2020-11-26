@@ -1,7 +1,13 @@
+
+GO
+
+/****** Object:  UserDefinedFunction [dbo].[RetornarTotalizadores]    Script Date: 26/11/2020 11:20:07 ******/
 SET ANSI_NULLS ON
 GO
+
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 ALTER FUNCTION [dbo].[RetornarTotalizadores](@acordcodigo bigint,@funcicodigo bigint, @datajornada datetime)
 RETURNS 
@@ -17,6 +23,7 @@ BEGIN
 	DECLARE @ordem1 int, @categoria int, @faixainicio int, @faixafim int -- ORDEM, CLASSE E FAIXAS DOS TOTALIZADORES
 	DECLARE @m1 int = 0, @m2 int = 0, @m3 int = 0, @m4 int = 0 -- REGISTRADORES
 	DECLARE @inicionoturno datetime, @fimnoturno datetime, @fatornoturno float, @estendenoturno bit -- VALORES PARA RECUPERAR ADN
+	DECLARE @cartacodigo bigint-- VALORES PARA RECUPERAR HORAS REALIZADAS
 	DECLARE @minutos int -- SAÍDA
 	DECLARE @dia int, @ocorrencia int -- OCORRÊNCIA
 	DECLARE @flag bit -- FLAG PARA LIBERAR OU NÃO O CÁLCULO DO TOTALIZADOR
@@ -113,8 +120,9 @@ BEGIN
 			-- CATEGORIA HORA REALIZADA
 			else if @categoria = 6
 			begin
+				set @cartacodigo = (select cartacodigo from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
 				-- RECUPERAR HORA REALIZADA
-				set @m1 = (select minuto from dbo.retornarSomaHorasFuncionario(@funcicodigo,@datajornada))
+				set @m1 = (select minuto from dbo.retornarSomaHorasFuncionario(@cartacodigo))
 				-- VERIFICA SE O VALOR RETORNADO ESTÁ DENTRO DA FAIXA
 				if @faixainicio < @m1 and @m1 <= @faixafim
 				begin
@@ -138,11 +146,12 @@ BEGIN
 			-- CATEGORIA HORA EXTRA
 			else if @categoria = 1
 			begin
+				set @cartacodigo = (select cartacodigo from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
 				-- RECUPERAR HORA REALIZADA
-				set @m1 = (select minuto from dbo.retornarSomaHorasFuncionario(@funcicodigo,@datajornada))
+				set @m1 = (select minuto from dbo.retornarSomaHorasFuncionario(@cartacodigo))
 	
 				-- RECUPERA HORA PREVISTA
-				set @m2 = (select coalesce(horasprevistas,0) from dbo.retornarSomaHorasFuncionario(@funcicodigo,@datajornada))
+				set @m2 = (select coalesce(horasprevistas,0) from dbo.retornarSomaHorasFuncionario(@cartacodigo))
 				-- VERIFICA SE A HORA REALIZADA É MAIOR DO QUE A HORA PREVISTA
 				if @m1 > @m2
 				begin
@@ -187,3 +196,4 @@ BEGIN
     RETURN;
 END
 GO
+
