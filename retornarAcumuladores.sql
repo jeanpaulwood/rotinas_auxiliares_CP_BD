@@ -1,7 +1,13 @@
+
+GO
+
+/****** Object:  UserDefinedFunction [dbo].[retornarAcumuladores]    Script Date: 26/11/2020 11:19:10 ******/
 SET ANSI_NULLS ON
 GO
+
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 -- =============================================
 -- Author:		Jean Paul
@@ -47,6 +53,7 @@ BEGIN
 		@horaextra int, 
 		@horanoturna int, 
 		@horaprevistamensal int = 0,
+		@cartacodigo bigint, 
 		@dias_uteis int = 0, 
 		@diasemana int, 
 		@feriado bit, 
@@ -72,6 +79,44 @@ BEGIN
 		set @horafalta = (select sum(cartahorasfalta) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada between @startDate and @endDate)
 		-- HORA NOTURNA
 		set @horanoturna = (select sum(cartaadn) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada between @startDate and @endDate)
+		
+		-- BKP 21/01/2019
+		/*declare dias cursor for
+		select cartacodigo,cartadiasemana,cartaflagferiado,cartadatajornada,ctococodigo from tbgabcartaodeponto (nolock) 
+		where funcicodigo = @funcicodigo and cartadatajornada between @startDate and @endDate
+		  
+		open dias
+			fetch next from dias into @cartacodigo, @diasemana, @feriado, @cartadatajornada,@indicacao
+			while @@FETCH_STATUS=0
+			begin
+				set @horainterval = @horainterval+(select COALESCE(minuto,0) from dbo.retornarIntervalosFuncionario(@cartacodigo,1))
+
+				set @escalcodigo = (select top 1 escalcodigo from tbgabfuncionarioescala (nolock) 
+									where fuescdatainiciovigencia <= @cartadatajornada and funcicodigo = @funcicodigo order by fuescdatainiciovigencia desc, fuescdatamovimentacao desc)
+				if @escalcodigo is not null 
+				begin 
+					set @regime = (select top 1 escalregime from tbgabescala (nolock) where escalcodigo = @escalcodigo) 
+				end 
+				
+				-- PLANTONISTA 07:20
+				if @regime = 2 and @diasemana <> 1 and @feriado = 0 and @indicacao <> 6 and @indicacao <> 5
+				begin
+					set @dias_uteis = @dias_uteis + 1
+				end
+				-- DIARISTA 08:48
+				else if @regime = 1 and @diasemana <> 1 and @diasemana <> 7 and @feriado = 0 and @indicacao <> 6 and @indicacao <> 5
+				begin
+					set @dias_uteis = @dias_uteis + 1
+				end
+				
+				fetch next from dias into @cartacodigo, @diasemana, @feriado, @cartadatajornada, @indicacao
+			end
+		close dias
+		deallocate dias
+
+		set @fatorhoramensal = (select min(horarfatorcargamensal) from tbgabhorario H (nolock) 
+								inner join tbgabcartaodeponto CP (nolock) on H.horarcodigo=CP.horarcodigo
+								where funcicodigo = @funcicodigo and CP.cartadatajornada between @startDate and @endDate)*/
 
 		select @fatorhoramensal = menor_fator,@dias_uteis = dias_uteis, @feriasEOuAfastamento = feriasafastamento from dbo.retornarMinimoFatorMensalNoPeriodo(@funcicodigo,@startDate,@endDate)
 
@@ -124,3 +169,4 @@ BEGIN
 	RETURN 
 END
 GO
+
