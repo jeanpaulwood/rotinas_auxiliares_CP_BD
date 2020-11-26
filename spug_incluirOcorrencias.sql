@@ -1,7 +1,13 @@
+
+
+
+/****** Object:  StoredProcedure [dbo].[spug_incluirOcorrencias]    Script Date: 26/11/2020 11:15:03 ******/
 SET ANSI_NULLS ON
 GO
+
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 
 -- =============================================
@@ -58,7 +64,7 @@ BEGIN
 	set @dataocorrencia2 = '1900-01-01'
 	set @count = 0
 	declare @ctococodigo int, @ctococodigooriginal int, 
-	@total_oco int = (select count(funcicodigo) from tbgabcartaodeponto where funcicodigo = @funcicodigo and cartamesbase = @mes and cartaanobase = @ano and ctococodigo in (5,6,7,8))
+	@total_oco int = (select count(cartacodigo) from tbgabcartaodeponto where funcicodigo = @funcicodigo and cartamesbase = @mes and cartaanobase = @ano and ctococodigo in (5,6,7,8))
 	
 	-- LIMPA AS FLAG's DE OCORRÊNCIA 
 	update tbgabcartaodeponto set cartaflagocorrencia = 0 where cartamesbase = @mes and cartaanobase = @ano and funcicodigo = @funcicodigo
@@ -399,3 +405,4 @@ BEGIN
 END
 
 GO
+
