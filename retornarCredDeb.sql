@@ -1,7 +1,13 @@
+
+GO
+
+/****** Object:  UserDefinedFunction [dbo].[retornarCredDeb]    Script Date: 26/11/2020 11:18:45 ******/
 SET ANSI_NULLS ON
 GO
+
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 
 
@@ -22,7 +28,8 @@ GO
 -- =============================================
 ALTER FUNCTION [dbo].[retornarCredDeb] 
 (
-	-- Add the parameters for the function here	
+	-- Add the parameters for the function here
+    @cartacodigo bigint,	
 	@funcicodigo int,	
     @datajornada datetime
 )
@@ -48,7 +55,7 @@ BEGIN
 	@chp=coalesce(cartacargahoraria,0),
 	@inicionoturno=cartainicionoturno,@fimnoturno=cartafimnoturno,@fatornoturno=cartafatornoturno,
 	@estendenoturno=cartaestendenoturno,@ctococodigo=ctococodigo,@he=coalesce(cartahorasextra,0)
-	from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada
+	from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo
 	declare @cred int = 0, @deb int = 0, @btotal int, @abonos int = 0, @adn int, @d1n int, @d2n int
 	declare @interval1_prev int = 0, @interval2_prev int = 0, @interval3_prev int = 0, @interval4_prev int = 0
 	declare @interval1_rea int = 0, @interval2_rea int = 0, @interval3_rea int = 0, @interval4_rea int = 0
@@ -75,12 +82,12 @@ BEGIN
 		select 
 		@er1=carta_realizado_e1, @sr1=carta_realizado_s1, @er2=carta_realizado_e2, @sr2=carta_realizado_s2, 
 		@er3=carta_realizado_e3, @sr3=carta_realizado_s3, @er4=carta_realizado_e4, @sr4=carta_realizado_s4 
-		from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada
+		from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo
 	
 		-- PARADAS REALIZADAS
-		if @sr1 is not null and @er2 is not null begin select @parada1_rea = minuto from dbo.retornarIntervalosFuncionario(@funcicodigo,@datajornada,1) end
-		if @sr2 is not null and @er3 is not null begin select @parada2_rea = minuto from dbo.retornarIntervalosFuncionario(@funcicodigo,@datajornada,2) end
-		if @sr3 is not null and @er4 is not null begin select @parada3_rea = minuto from dbo.retornarIntervalosFuncionario(@funcicodigo,@datajornada,3) end
+		if @sr1 is not null and @er2 is not null begin select @parada1_rea = minuto from dbo.retornarIntervalosFuncionario(@cartacodigo,1) end
+		if @sr2 is not null and @er3 is not null begin select @parada2_rea = minuto from dbo.retornarIntervalosFuncionario(@cartacodigo,2) end
+		if @sr3 is not null and @er4 is not null begin select @parada3_rea = minuto from dbo.retornarIntervalosFuncionario(@cartacodigo,3) end
 
 		-- PARADAS PREVISTAS
 		if @sp1 is not null and @ep2 is not null begin set @parada1_prev = datediff(minute,@sp1,@ep2) end
@@ -127,7 +134,7 @@ BEGIN
 		end
 
 		-- INTERVALOS REALIZADOS
-		select @interval1_rea=interval1,@interval2_rea=interval2,@interval3_rea=interval3,@interval4_rea=interval4 from dbo.retornarSomaHorasFuncionario(@funcicodigo,@datajornada)
+		select @interval1_rea=interval1,@interval2_rea=interval2,@interval3_rea=interval3,@interval4_rea=interval4 from dbo.retornarSomaHorasFuncionario(@cartacodigo)
 
 		-- QUANDO HOUVER ATRASO NA PARADA 1 DA JORNADA
 		if @parada1_prev < @parada1_rea --or @parada2_prev < @parada2_rea or @parada3_prev < @parada3_rea
@@ -206,3 +213,4 @@ BEGIN
 	RETURN 
 END
 GO
+
