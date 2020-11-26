@@ -1,7 +1,13 @@
+
+GO
+
+/****** Object:  UserDefinedFunction [dbo].[retornarPeriodoFuncionario]    Script Date: 26/11/2020 11:17:46 ******/
 SET ANSI_NULLS ON
 GO
+
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 
 
@@ -15,8 +21,7 @@ GO
 ALTER FUNCTION [dbo].[retornarPeriodoFuncionario] 
 (
 	-- Add the parameters for the function here
-	@funcicodigo int,
-	@cartadata datetime,
+	@cartacodigo int,
 	@periodo smallint
 )
 RETURNS 
@@ -32,54 +37,56 @@ BEGIN
 	declare @jornadalivre bit -- Indica se o funcionário está marcado como jornada livre
 	declare @entprev datetime, @saiprev datetime -- Entradas e saídas previstas
 	declare @toleranciaanterior_e datetime, @toleranciaposterior_e datetime, @toleranciaanterior_s datetime, @toleranciaposterior_s datetime -- Entradas e saídas com tolerância 
+	declare @funcicodigo int = (select funcicodigo from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 	declare @leimotorista bit = (select coalesce(funcileimotorista,0) from tbgabfuncionario (nolock) where funcicodigo = @funcicodigo)
+	declare @cartadata datetime = (select cartadatajornada from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 	declare @pis varchar(11) = (select funcipis from tbgabfuncionario (nolock) where funcicodigo = @funcicodigo)
-	set @jornadalivre = (select cartajornadalivre from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
+	set @jornadalivre = (select cartajornadalivre from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 
 	-- ENTRADA/SAÍDA
 	if @periodo = 1 
 	begin
-		set @date1 = (select carta_realizado_e1 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @date2 = (select carta_realizado_s1 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @entprev = (select carta_previsto_e1 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @saiprev = (select carta_previsto_s1 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaanterior_e = (select dateadd(minute,-carta_tolerancia_anterior_e1,carta_previsto_e1) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaposterior_e = (select dateadd(SECOND,carta_tolerancia_posterior_e1*60+59,carta_previsto_e1) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaanterior_s = (select dateadd(minute,-carta_tolerancia_anterior_s1,carta_previsto_s1) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaposterior_s = (select dateadd(SECOND,carta_tolerancia_posterior_s1*60+59,carta_previsto_s1) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
+		set @date1 = (select carta_realizado_e1 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @date2 = (select carta_realizado_s1 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @entprev = (select carta_previsto_e1 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @saiprev = (select carta_previsto_s1 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaanterior_e = (select dateadd(minute,-carta_tolerancia_anterior_e1,carta_previsto_e1) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaposterior_e = (select dateadd(SECOND,carta_tolerancia_posterior_e1*60+59,carta_previsto_e1) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaanterior_s = (select dateadd(minute,-carta_tolerancia_anterior_s1,carta_previsto_s1) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaposterior_s = (select dateadd(SECOND,carta_tolerancia_posterior_s1*60+59,carta_previsto_s1) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 	end
 	else if @periodo = 2
 	begin
-		set @date1 = (select carta_realizado_e2 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @date2 = (select carta_realizado_s2 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @entprev = (select carta_previsto_e2 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @saiprev = (select carta_previsto_s2 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaanterior_e = (select dateadd(minute,-carta_tolerancia_anterior_e2,carta_previsto_e2) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaposterior_e = (select dateadd(SECOND,carta_tolerancia_posterior_e2*60+59,carta_previsto_e2) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaanterior_s = (select dateadd(minute,-carta_tolerancia_anterior_s2,carta_previsto_s2) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaposterior_s = (select dateadd(SECOND,carta_tolerancia_posterior_s2*60+59,carta_previsto_s2) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
+		set @date1 = (select carta_realizado_e2 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @date2 = (select carta_realizado_s2 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @entprev = (select carta_previsto_e2 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @saiprev = (select carta_previsto_s2 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaanterior_e = (select dateadd(minute,-carta_tolerancia_anterior_e2,carta_previsto_e2) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaposterior_e = (select dateadd(SECOND,carta_tolerancia_posterior_e2*60+59,carta_previsto_e2) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaanterior_s = (select dateadd(minute,-carta_tolerancia_anterior_s2,carta_previsto_s2) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaposterior_s = (select dateadd(SECOND,carta_tolerancia_posterior_s2*60+59,carta_previsto_s2) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 	end
 	else if @periodo = 3
 	begin
-		set @date1 = (select carta_realizado_e3 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @date2 = (select carta_realizado_s3 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @entprev = (select carta_previsto_e3 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @saiprev = (select carta_previsto_s3 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaanterior_e = (select dateadd(minute,-carta_tolerancia_anterior_e3,carta_previsto_e3) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaposterior_e = (select dateadd(SECOND,carta_tolerancia_posterior_e3*60+59,carta_previsto_e3) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaanterior_s = (select dateadd(minute,-carta_tolerancia_anterior_s3,carta_previsto_s3) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaposterior_s = (select dateadd(SECOND,carta_tolerancia_posterior_s3*60+59,carta_previsto_s3) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
+		set @date1 = (select carta_realizado_e3 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @date2 = (select carta_realizado_s3 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @entprev = (select carta_previsto_e3 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @saiprev = (select carta_previsto_s3 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaanterior_e = (select dateadd(minute,-carta_tolerancia_anterior_e3,carta_previsto_e3) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaposterior_e = (select dateadd(SECOND,carta_tolerancia_posterior_e3*60+59,carta_previsto_e3) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaanterior_s = (select dateadd(minute,-carta_tolerancia_anterior_s3,carta_previsto_s3) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaposterior_s = (select dateadd(SECOND,carta_tolerancia_posterior_s3*60+59,carta_previsto_s3) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 	end
 	else if @periodo = 4
 	begin
-		set @date1 = (select carta_realizado_e4 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @date2 = (select carta_realizado_s4 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @entprev = (select carta_previsto_e4 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @saiprev = (select carta_previsto_s4 from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaanterior_e = (select dateadd(minute,-carta_tolerancia_anterior_e4,carta_previsto_e4) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaposterior_e = (select dateadd(SECOND,carta_tolerancia_posterior_e4*60+59,carta_previsto_e4) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaanterior_s = (select dateadd(minute,-carta_tolerancia_anterior_s4,carta_previsto_s4) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
-		set @toleranciaposterior_s = (select dateadd(SECOND,carta_tolerancia_posterior_s4*60+59,carta_previsto_s4) from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata)
+		set @date1 = (select carta_realizado_e4 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @date2 = (select carta_realizado_s4 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @entprev = (select carta_previsto_e4 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @saiprev = (select carta_previsto_s4 from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaanterior_e = (select dateadd(minute,-carta_tolerancia_anterior_e4,carta_previsto_e4) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaposterior_e = (select dateadd(SECOND,carta_tolerancia_posterior_e4*60+59,carta_previsto_e4) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaanterior_s = (select dateadd(minute,-carta_tolerancia_anterior_s4,carta_previsto_s4) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
+		set @toleranciaposterior_s = (select dateadd(SECOND,carta_tolerancia_posterior_s4*60+59,carta_previsto_s4) from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 	end
 	else if @periodo = 5
 	begin
@@ -172,3 +179,4 @@ BEGIN
 	RETURN;
 END
 GO
+
