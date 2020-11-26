@@ -1,7 +1,13 @@
+
+
+
+/****** Object:  UserDefinedFunction [dbo].[retornarSomaHorasFuncionario]    Script Date: 26/11/2020 11:17:12 ******/
 SET ANSI_NULLS ON
 GO
+
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 
 
@@ -22,8 +28,7 @@ GO
 ALTER FUNCTION [dbo].[retornarSomaHorasFuncionario] 
 (
 	-- Add the parameters for the function here
-	@funcicodigo int,
-	@cartadata datetime
+	@cartacodigo bigint
 )
 RETURNS 
 @tempo table (minuto int,saida varchar(20),interval1 int, interval2 int, interval3 int, interval4 int,adn int,adnsemfator int, horasfalta int, horasprevistas int, adnocorrencia int)
@@ -39,9 +44,11 @@ BEGIN
 	declare @entprev datetime, @saiprev datetime -- Entradas e saídas previstas
 	declare @horasfalta int = 0 -- Faltas e atrasos do funcionário
 	declare @horasprevistas int -- Carga horária prevista para o funcionário 
+	declare @funcicodigo int
 	declare @inicionoturno datetime
 	declare @fimnoturno datetime
 	declare @fatornoturno float
+	declare @cartadata datetime
 	declare @estendenoturno bit
 	declare @adnsemfator int
 	declare @adnocorrencia int
@@ -56,7 +63,7 @@ BEGIN
 	@estendenoturno=cartaestendenoturno,
 	@jornadalivre=cartajornadalivre,
 	@adn=cartaadn
-	from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @cartadata
+	from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo
 
 	set @adnocorrencia = (select sum(cartovaloracumulado) from tbgabcartaototalizador (nolock) where funcicodigo = @funcicodigo and cartodatajornada = @cartadata and catcartocodigo in (114,115))
 
@@ -74,14 +81,14 @@ BEGIN
 		set @horasprevistas = 0
 	end
 
-	select @interval1 = coalesce(minuto,0),@contador=@contador+cont from dbo.retornarPeriodoFuncionario(@funcicodigo,@cartadata,1)
-	select @interval2 = coalesce(minuto,0),@contador=@contador+cont from dbo.retornarPeriodoFuncionario(@funcicodigo,@cartadata,2)
-	select @interval3 = coalesce(minuto,0),@contador=@contador+cont from dbo.retornarPeriodoFuncionario(@funcicodigo,@cartadata,3)
-	select @interval4 = coalesce(minuto,0),@contador=@contador+cont from dbo.retornarPeriodoFuncionario(@funcicodigo,@cartadata,4)
+	select @interval1 = coalesce(minuto,0),@contador=@contador+cont from dbo.retornarPeriodoFuncionario(@cartacodigo,1)
+	select @interval2 = coalesce(minuto,0),@contador=@contador+cont from dbo.retornarPeriodoFuncionario(@cartacodigo,2)
+	select @interval3 = coalesce(minuto,0),@contador=@contador+cont from dbo.retornarPeriodoFuncionario(@cartacodigo,3)
+	select @interval4 = coalesce(minuto,0),@contador=@contador+cont from dbo.retornarPeriodoFuncionario(@cartacodigo,4)
 	
-	set @periodo1 = coalesce((select minuto from dbo.retornarIntervalosFuncionario(@funcicodigo,@cartadata,1) where contabiliza = 1),0)
-	set @periodo2 = coalesce((select minuto from dbo.retornarIntervalosFuncionario(@funcicodigo,@cartadata,2) where contabiliza = 1),0)
-	set @periodo3 = coalesce((select minuto from dbo.retornarIntervalosFuncionario(@funcicodigo,@cartadata,3) where contabiliza = 1),0)
+	set @periodo1 = coalesce((select minuto from dbo.retornarIntervalosFuncionario(@cartacodigo,1) where contabiliza = 1),0)
+	set @periodo2 = coalesce((select minuto from dbo.retornarIntervalosFuncionario(@cartacodigo,2) where contabiliza = 1),0)
+	set @periodo3 = coalesce((select minuto from dbo.retornarIntervalosFuncionario(@cartacodigo,3) where contabiliza = 1),0)
 
 	if @contador % 2 = 0
 	begin -- NÚMERO PAR DE APONTAMENTOS
@@ -89,6 +96,7 @@ BEGIN
 		
 		if @minutos > 0
 		begin
+			--set @adn = (select cartaadn from tbgabcartaodeponto (nolock) where cartacodigo = @cartacodigo)
 			if @adn is null begin set @adn = 0 end
 			if @adnocorrencia is null begin set @adnocorrencia = 0 end
 			set @minutos = @minutos - @adnsemfator
@@ -111,8 +119,8 @@ BEGIN
 	begin -- SEM APONTAMENTOS NO DIA
 		set @minutos = 0;
 		set @ctocodescricao = (select ctocodescricao from tbgabcartaodeponto CA (nolock) 
-		left join tbgabcartaoocorrencia CO (nolock) on CA.ctococodigo=CO.ctococodigo where CA.funcicodigo = @funcicodigo and CA.cartadatajornada = @cartadata)
-		if @ctocodescricao = 'Trabalho' and @cartadata <= getdate()
+		left join tbgabcartaoocorrencia CO (nolock) on CA.ctococodigo=CO.ctococodigo where CA.cartacodigo = @cartacodigo)
+		if @ctocodescricao = 'Trabalho'
 		begin 
 			set @saida = 'FALTA';
 		end
@@ -136,3 +144,4 @@ BEGIN
 	RETURN;
 END
 GO
+
