@@ -75,18 +75,17 @@ BEGIN
 		-- ===========================================================
 		
 			-- TOTALIZADORES PRINCIPAIS ADN,HR,HE
-			DECLARE totalizadores CURSOR FOR
-				--select totalcodigo,minutos,flag,faixainicio,faixafim,rubrica,categoria,percentual from dbo.RetornarTotalizadores(@acordcodigo,@funcicodigo,@datajornada) /*where minutos > 0*/ order by CASE WHEN categoria=2 THEN 0 ELSE 2 END, percentual desc,minutos desc
-				select TT.totalcodigo,TT.totalfaixainicio,TT.totalfaixafim,TT.rubricodigo,TT.totcacodigo,TT.totalpercentualagrupamento,TT.totaloperadorlogico 
-				from tbgabtotalizadortipo TT (nolock) 
-				where TT.totalcodigo in
-				(select totalcodigo from tbgabtotalizadoracordocoletivo TA (nolock) where acordcodigo = @acordcodigo) and TT.totaltipoapuracao = 1
-				order by CASE WHEN TT.totcacodigo=2 THEN 0 ELSE 2 END, TT.totalpercentualagrupamento desc
-			OPEN totalizadores
-			--FETCH NEXT FROM totalizadores INTO @totalcodigo,@minutos,@flag,@faixainicio,@faixafim,@rubricodigo,@categoria,@percentualagrupamento
-			FETCH NEXT FROM totalizadores INTO @totalcodigo,@faixainicio,@faixafim,@rubricodigo,@categoria,@percentualagrupamento,@operador
-			WHILE @@FETCH_STATUS = 0
+			declare @totalizadores_table table (pk int,totalcodigo int,totalfaixainicio int, totalfaixafim int, rubricodigo int, totcacodigo int, totalpercentualagrupamento float,totaloperadorlogico bit)
+			insert @totalizadores_table select ROW_NUMBER () OVER (order by CASE WHEN TT.totcacodigo=2 THEN 0 ELSE 2 END, TT.totalpercentualagrupamento desc),TT.totalcodigo,TT.totalfaixainicio,TT.totalfaixafim,TT.rubricodigo,TT.totcacodigo,TT.totalpercentualagrupamento,TT.totaloperadorlogico 
+			from tbgabtotalizadortipo TT (nolock) 
+			where TT.totalcodigo in
+			(select totalcodigo from tbgabtotalizadoracordocoletivo TA (nolock) where acordcodigo = @acordcodigo) and TT.totaltipoapuracao = 1
+			declare @pk int = 1
+			declare @totalRows int = (select count(pk) from @totalizadores_table)
+			WHILE @pk <= @totalRows
 			BEGIN
+				select @totalcodigo=totalcodigo,@faixainicio=totalfaixainicio,@faixafim=totalfaixafim,@rubricodigo=rubricodigo,@categoria=totcacodigo,@percentualagrupamento=totalpercentualagrupamento,@operador=totaloperadorlogico 
+				from @totalizadores_table where pk=@pk
 				set @totalcodigoaux = null
 				set @m1 = 0
 				set @m2 = 0
@@ -278,12 +277,8 @@ BEGIN
 					end
 
 				end -- END if @flag = 1
-				
-			--FETCH NEXT FROM totalizadores INTO @totalcodigo,@minutos,@flag,@faixainicio,@faixafim,@rubricodigo,@categoria,@percentualagrupamento
-			FETCH NEXT FROM totalizadores INTO @totalcodigo,@faixainicio,@faixafim,@rubricodigo,@categoria,@percentualagrupamento,@operador
-			END
-			CLOSE totalizadores
-			DEALLOCATE totalizadores  
+				set @pk = @pk + 1
+			END 
 			
 			set @faixainicio = null set @faixafim = null set @m1 = null set @m2 = null set @m3 = null set @m4 = null 
 			--set @inicionoturno = null set @fimnoturno = null set @fatornoturno = null set @estendenoturno = null 
@@ -378,22 +373,25 @@ BEGIN
 			set @flag = null set @flag2 = null set @operador = null set @totalcodigo = null set @rubricodigo = null set @percentualagrupamento = null set @count = null
 		
 			-- TOTALIZADORES HORA GARANTIDA HORA REALIZADA
-			DECLARE totalizadores CURSOR FOR
-				select 
-				T.totalcodigo,
-				totalgarantia,
-				T.totalrubricagarantido,
-				T.totalpercentualagrupamento
-				from tbgabtotalizadortipo T (nolock)
-				inner join tbgabtotalizadoracordocoletivo TA (nolock) on T.totalcodigo=TA.totalcodigo
-				inner join tbgabacordocoletivo A (nolock) on TA.acordcodigo=A.acordcodigo
-				where A.acordcodigo = @acordcodigo and T.totalflagvisualizacartao = 1 and T.totaltipoapuracao = 1 and T.totcacodigo = 6 
-				and (T.totalgarantia > 0 and T.totalgarantia is not null) and T.totalapuracaogarantia = 1
-				order by totalpercentualagrupamento desc
-			OPEN totalizadores
-			FETCH NEXT FROM totalizadores INTO @totalcodigo,@totalgarantia,@totalrubricagarantida,@percentualagrupamento
-			WHILE @@FETCH_STATUS = 0
+			declare @totalizadores_table2 table (pk int,totalcodigo int, totalgarantia int, totalrubricagarantida int, percentualagrupamento float)
+			insert @totalizadores_table2 select ROW_NUMBER () OVER (order by T.totalpercentualagrupamento desc),
+			T.totalcodigo,
+			T.totalgarantia,
+			T.totalrubricagarantido,
+			T.totalpercentualagrupamento
+			from tbgabtotalizadortipo T (nolock)
+			inner join tbgabtotalizadoracordocoletivo TA (nolock) on T.totalcodigo=TA.totalcodigo
+			inner join tbgabacordocoletivo A (nolock) on TA.acordcodigo=A.acordcodigo
+			where A.acordcodigo = @acordcodigo and T.totalflagvisualizacartao = 1 and T.totaltipoapuracao = 1 and T.totcacodigo = 6 
+			and (T.totalgarantia > 0 and T.totalgarantia is not null) and T.totalapuracaogarantia = 1
+			set @pk = 1
+			set @totalRows = (select count(pk) from @totalizadores_table2)
+
+			WHILE @pk <= @totalRows
 			BEGIN
+				select @totalcodigo=totalcodigo,@totalgarantia=totalgarantia,@totalrubricagarantida=totalrubricagarantida,@percentualagrupamento=percentualagrupamento 
+				from @totalizadores_table2 where pk = @pk
+
 				-- PEGA O VALOR DO CARTÃO TOTALIZADOR PRINCIPAL PARA O DIA
 				set @minutos = (select cartovaloracumulado from tbgabcartaototalizador (nolock) 
 								where funcicodigo = @funcicodigo and totalcodigo = @totalcodigo and catcartocodigo = 4 and cartodatajornada = @datajornada)
@@ -417,10 +415,8 @@ BEGIN
 					set @minutos = (select valor from dbo.retornarTotalTotalizadoresDia(@funcicodigo,@datajornada))
 					update tbgabcartaodeponto set cartahorasextra = @minutos where cartadatajornada = @datajornada and funcicodigo = @funcicodigo
 				end
-			FETCH NEXT FROM totalizadores INTO @totalcodigo,@totalgarantia,@totalrubricagarantida,@percentualagrupamento
-			END
-			CLOSE totalizadores
-			DEALLOCATE totalizadores  
+				set @pk = @pk + 1
+			END  
 			
 			set @faixainicio = null set @faixafim = null set @m1 = null set @m2 = null set @m3 = null set @m4 = null 
 			--set @inicionoturno = null set @fimnoturno = null set @fatornoturno = null set @estendenoturno = null 
@@ -429,22 +425,24 @@ BEGIN
 			set @totalproporcionalvalor = null set @totalgarantia = null set @totalrubricagarantida = null
 
 			-- TOTALIZADORES HORA GARANTIDA HORA EXTRA
-			DECLARE totalizadores CURSOR FOR
-				select 
-				T.totalcodigo,
-				totalgarantia,
-				T.totalrubricagarantido,
-				T.totalpercentualagrupamento
-				from tbgabtotalizadortipo T (nolock)
-				inner join tbgabtotalizadoracordocoletivo TA (nolock) on T.totalcodigo=TA.totalcodigo
-				inner join tbgabacordocoletivo A (nolock) on TA.acordcodigo=A.acordcodigo
-				where A.acordcodigo = @acordcodigo and T.totalflagvisualizacartao = 1 and T.totaltipoapuracao = 1 and T.totalapuracaogarantia = 1 and T.totcacodigo = 1
-				and (T.totalgarantia > 0 and T.totalgarantia is not null)
-				order by totalpercentualagrupamento desc
-			OPEN totalizadores
-			FETCH NEXT FROM totalizadores INTO @totalcodigo,@totalgarantia,@totalrubricagarantida,@percentualagrupamento
-			WHILE @@FETCH_STATUS = 0
+			declare @totalizadores_table3 table (pk int, totalcodigo int, totalgarantia int, totalrubricagarantida int, totalpercentualagrupamento float)
+			insert @totalizadores_table3 select ROW_NUMBER () OVER (order by T.totalpercentualagrupamento desc),
+			T.totalcodigo,
+			totalgarantia,
+			T.totalrubricagarantido,
+			T.totalpercentualagrupamento
+			from tbgabtotalizadortipo T (nolock)
+			inner join tbgabtotalizadoracordocoletivo TA (nolock) on T.totalcodigo=TA.totalcodigo
+			inner join tbgabacordocoletivo A (nolock) on TA.acordcodigo=A.acordcodigo
+			where A.acordcodigo = @acordcodigo and T.totalflagvisualizacartao = 1 and T.totaltipoapuracao = 1 and T.totalapuracaogarantia = 1 and T.totcacodigo = 1
+			and (T.totalgarantia > 0 and T.totalgarantia is not null)
+			
+			set @pk = 1
+			set @totalRows = (select count(pk) from @totalizadores_table3)
+
+			WHILE @pk <= @totalRows
 			BEGIN
+				select @totalcodigo=totalcodigo,@totalgarantia=totalgarantia,@totalrubricagarantida=totalrubricagarantida,@percentualagrupamento=totalpercentualagrupamento from @totalizadores_table3 where pk = @pk
 				
 				-- PEGA O VALOR DO CARTÃO TOTALIZADOR PRINCIPAL PARA O DIA
 				set @minutos = (select cartovaloracumulado from tbgabcartaototalizador (nolock) 
@@ -469,11 +467,8 @@ BEGIN
 					set @minutos = (select valor from dbo.retornarTotalTotalizadoresDia(@funcicodigo,@datajornada))
 					update tbgabcartaodeponto set cartahorasextra = @minutos where cartadatajornada = @datajornada and funcicodigo = @funcicodigo
 				end
-
-			FETCH NEXT FROM totalizadores INTO @totalcodigo,@totalgarantia,@totalrubricagarantida,@percentualagrupamento
+				set @pk = @pk + 1	
 			END
-			CLOSE totalizadores
-			DEALLOCATE totalizadores  
 			
 			set @m1 = null set @m2 = null set @m3 = null set @m4 = null 
 			--set @inicionoturno = null set @fimnoturno = null set @fatornoturno = null set @estendenoturno = null
@@ -520,30 +515,33 @@ BEGIN
 				end
 				-- SE INDICAÇÃO FOR DIFERENTE DE TRABALHO, DÉBITO RECEBE VALOR NULL
 				if @ctococodigo <> 1 begin set @deb = null end
+
 				-- TOTALIZADORES BANCO DE HORAS HORA EXTRA
-				DECLARE totalizadores_BH CURSOR FOR
-					select 
-					T.totalcodigo,
-					totalcompensavel,
-					totaltipocompensacao,
-					totalfatorcompensacao,
-					totalabsolutoinicio,
-					totalabsolutofim,
-					totalproporcionalvalor,
-					totaloperadorlogico,
-					totalpercentualagrupamento,
-					totalfaixainicio,totalfaixafim
-					from tbgabtotalizadortipo T (nolock)
-					inner join tbgabtotalizadoracordocoletivo TA (nolock) on T.totalcodigo=TA.totalcodigo
-					inner join tbgabacordocoletivo A (nolock) on TA.acordcodigo=A.acordcodigo
-					where A.acordcodigo = @acordcodigo and T.totalflagvisualizacartao = 1 and T.totaltipoapuracao = 1 and T.totcacodigo = 1
-					and T.totalcompensavel = 2 and T.totalfatorcompensacao > 0
-					order by totalpercentualagrupamento desc
-				OPEN totalizadores_BH
-				FETCH NEXT FROM totalizadores_BH INTO @totalcodigo,@totalcompensavel,@tipocompensacao,@totalfatorcompensacao,@totalabsolutoinicio,
-				@totalabsolutofim,@totalproporcionalvalor,@operador,@percentualagrupamento,@faixainicio,@faixafim
-				WHILE @@FETCH_STATUS = 0
+				declare @totalizadores_bh table (pk int, totalcodigo int, totalcompensavel smallint, totaltipocompensacao smallint, totalfatorcompensacao numeric, totalabsolutoinicio int, totalabsolutofim int, totalproporcionalvalor int, totaloperadorlogico bit, totalpercentualagrupamento numeric, totalfaixainicio int, totalfaixafim int)
+				insert @totalizadores_bh select ROW_NUMBER () OVER (order by T.totalpercentualagrupamento desc),
+				T.totalcodigo,
+				totalcompensavel,
+				totaltipocompensacao,
+				totalfatorcompensacao,
+				totalabsolutoinicio,
+				totalabsolutofim,
+				totalproporcionalvalor,
+				totaloperadorlogico,
+				totalpercentualagrupamento,
+				totalfaixainicio,totalfaixafim
+				from tbgabtotalizadortipo T (nolock)
+				inner join tbgabtotalizadoracordocoletivo TA (nolock) on T.totalcodigo=TA.totalcodigo
+				inner join tbgabacordocoletivo A (nolock) on TA.acordcodigo=A.acordcodigo
+				where A.acordcodigo = @acordcodigo and T.totalflagvisualizacartao = 1 and T.totaltipoapuracao = 1 and T.totcacodigo = 1
+				and T.totalcompensavel = 2 and T.totalfatorcompensacao > 0
+
+				set @pk = 1
+				set @totalRows = (select count(pk) from @totalizadores_bh)
+
+				WHILE @pk <= @totalRows
 				BEGIN
+					select @totalcodigo=totalcodigo,@totalcompensavel=totalcompensavel,@tipocompensacao=totaltipocompensacao,@totalfatorcompensacao=totalfatorcompensacao,@totalabsolutoinicio=totalabsolutoinicio,@totalabsolutofim=totalabsolutofim,@totalproporcionalvalor=totalproporcionalvalor,@operador=totaloperadorlogico,@percentualagrupamento=totalpercentualagrupamento,@faixainicio=totalfaixainicio,@faixafim=totalfaixafim from @totalizadores_bh where pk=@pk
+
 					set @flag = (select dbo.retornarTotalizadorAtivo(@funcicodigo,@datajornada,@operador,@totalcodigo))
 					-- VERIFICA SE POSSUI TOTALIZADOR DE MESMA CATEGORIA COM FAIXAS DE HORÁRIO CONFLITANTE E VALOR DE AGRUPAMENTO MAIOR 
 					set @flag2 = (select count(totalcodigo) from dbo.verificaTotalizadoresDiariosComMesmoDiaFaixa(@funcicodigo,@datajornada,@acordcodigo,@totalcodigo,@faixainicio,@faixafim,@percentualagrupamento,1))
@@ -727,11 +725,8 @@ BEGIN
 						--exec dbo.spug_incluirCredDeb @cartacodigo, @funcicodigo, @datajornada, @totalcodigo
 						
 					end
-				FETCH NEXT FROM totalizadores_BH INTO @totalcodigo,@totalcompensavel,@tipocompensacao,@totalfatorcompensacao,@totalabsolutoinicio,
-				@totalabsolutofim,@totalproporcionalvalor,@operador,@percentualagrupamento,@faixainicio,@faixafim
+					set @pk = @pk + 1
 				END
-				CLOSE totalizadores_BH
-				DEALLOCATE totalizadores_BH
 			end
 	END
 END
