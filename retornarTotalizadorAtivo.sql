@@ -19,20 +19,28 @@ BEGIN
 	DECLARE @dsr bit, @folga bit, @feriado bit -- OCORRÊNCIAS
 	DECLARE @flag bit, @dia smallint, @ocorrencia int, @flagferiado bit
 	DECLARE @TESTE int = 0
+
+	select 
+    @flagferiado=cartaflagferiado,
+    @dia=cartadiasemana,
+    @ocorrencia=ctococodigo
+    from tbgabcartaodeponto (nolock) 
+    where funcicodigo = @funcicodigo and cartadatajornada = @datajornada
 	
-	set @flagferiado = (select cartaflagferiado from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada)
-	set @dia = (select cartadiasemana from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada) 
-	set @ocorrencia = (select ctococodigo from tbgabcartaodeponto (nolock) where funcicodigo = @funcicodigo and cartadatajornada = @datajornada) 
-	set @dsr = (select totalflagsituacaodsr from tbgabtotalizadortipo (nolock) where totalcodigo = @totalcodigo)
-	set @folga = (select totalflagsituacaofolga from tbgabtotalizadortipo (nolock) where totalcodigo = @totalcodigo)
-	set @feriado = (select totalflagsituacaoferiado from tbgabtotalizadortipo (nolock) where totalcodigo = @totalcodigo)
-	set @dom = (select totalflagdiadom from tbgabtotalizadortipo (nolock) where totalcodigo = @totalcodigo)
-	set @seg = (select totalflagdiaseg from tbgabtotalizadortipo (nolock) where totalcodigo = @totalcodigo)
-	set @ter = (select totalflagdiater from tbgabtotalizadortipo (nolock) where totalcodigo = @totalcodigo)
-	set @qua = (select totalflagdiaqua from tbgabtotalizadortipo (nolock) where totalcodigo = @totalcodigo)
-	set @qui = (select totalflagdiaqui from tbgabtotalizadortipo (nolock) where totalcodigo = @totalcodigo)
-	set @sex = (select totalflagdiasex from tbgabtotalizadortipo (nolock) where totalcodigo = @totalcodigo)
-	set @sab = (select totalflagdiasab from tbgabtotalizadortipo (nolock) where totalcodigo = @totalcodigo)
+    select 
+    @dsr=totalflagsituacaodsr,
+    @folga=totalflagsituacaofolga,
+    @feriado=totalflagsituacaoferiado,
+    @dom=totalflagdiadom,
+    @seg=totalflagdiaseg,
+    @ter=totalflagdiater,
+    @qua=totalflagdiaqua,
+    @qui=totalflagdiaqui,
+    @sex=totalflagdiasex,
+    @sab=totalflagdiasab
+    from tbgabtotalizadortipo (nolock) 
+    where totalcodigo = @totalcodigo
+	
 	declare @flag2 int = 0
 	set @flag = 0
 		
