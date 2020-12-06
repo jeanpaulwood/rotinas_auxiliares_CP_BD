@@ -45,41 +45,6 @@ BEGIN
 		@valorcargahorariafixamensal int = 0,
 		@feriasEOuAfastamento int = 0
 		
-		-- BKP 21/01/2019
-		/*declare dias cursor for
-		select cartacodigo,cartadiasemana,cartaflagferiado,cartadatajornada,ctococodigo from tbgabcartaodeponto (nolock) 
-		where funcicodigo = @funcicodigo and cartadatajornada between @startDate and @endDate
-		  
-		open dias
-			fetch next from dias into @cartacodigo, @diasemana, @feriado, @cartadatajornada,@indicacao
-			while @@FETCH_STATUS=0
-			begin
-				
-				set @escalcodigo = (select top 1 escalcodigo from tbgabfuncionarioescala (nolock) 
-									where funcicodigo = @funcicodigo and fuescdatainiciovigencia <= @cartadatajornada order by fuescdatainiciovigencia desc, fuescdatamovimentacao desc)
-
-				if @escalcodigo is null begin set @escalcodigo = 0 end
-				set @regime = (select escalregime from tbgabescala (nolock) where escalcodigo = @escalcodigo)
-				
-				-- PLANTONISTA 07:20
-				if @regime = 2 and @diasemana <> 1 and @feriado = 0 and @indicacao <> 6 and @indicacao <> 5
-				begin
-					set @dias_uteis = @dias_uteis + 1
-				end
-				-- DIARISTA 08:48
-				else if @regime = 1 and @diasemana <> 1 and @diasemana <> 7 and @feriado = 0 and @indicacao <> 6 and @indicacao <> 5
-				begin
-					set @dias_uteis = @dias_uteis + 1
-				end
-				
-				fetch next from dias into @cartacodigo, @diasemana, @feriado, @cartadatajornada, @indicacao
-			end
-		close dias
-		deallocate dias
-
-		set @fatorhoramensal = (select min(horarfatorcargamensal) from tbgabhorario H (nolock)
-								inner join tbgabcartaodeponto CP (nolock) on H.horarcodigo=CP.horarcodigo 
-								where funcicodigo = @funcicodigo and CP.cartadatajornada between @startDate and @endDate)*/
 		select @fatorhoramensal = menor_fator,@dias_uteis = dias_uteis, @feriasEOuAfastamento = feriasafastamento from dbo.retornarMinimoFatorMensalNoPeriodo(@funcicodigo,@startDate,@endDate)
 								
 		if @fatorhoramensal is null begin set @fatorhoramensal = 0 end

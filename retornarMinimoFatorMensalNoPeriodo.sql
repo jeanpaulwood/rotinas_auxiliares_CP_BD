@@ -11,14 +11,17 @@ ALTER FUNCTION [dbo].[retornarMinimoFatorMensalNoPeriodo]
     @periodofim datetime	
 )
 RETURNS 
-@tabela TABLE ( menor_fator int, menor_escala int, menor_regime smallint, dias_uteis int, horaprevistamensal int,vigencia datetime, ult_movimentacao datetime, fator_mensal int, feriasafastamento int )
+@tabela TABLE ( menor_fator int, menor_escala int, menor_regime smallint, dias_uteis int, horaprevistamensal int,vigencia datetime, ult_movimentacao datetime, fator_mensal int, feriasafastamento int, dt_demissao datetime )
 AS
 BEGIN
 		
 		declare 
 		@dt datetime, @regime smallint, @menor_regime smallint, @dias_uteis int = 0, @escalcodigo int, @fatormensal int, @menor_fator int = 1440, 
 		@vigencia_anterior datetime = '1900-01-01 00:00', @data_movimentacao datetime, @menor_escala int, 
-		@ult_movimentacao datetime = '1900-01-01', @vigencia datetime = '1900-01-01 00:00', @previstomensal int
+		@ult_movimentacao datetime = '1900-01-01', @vigencia datetime = '1900-01-01 00:00', @previstomensal int,
+		@dt_demissao datetime , @dt_admissao datetime
+		select top 1 @dt_demissao = coalesce(funcidatademissao,@periodofim), @dt_admissao = coalesce(funcidataadmissao,'1900-01-01') from tbgabfuncionario where funcicodigo = @funcicodigo
+		if @dt_demissao > @periodofim or @dt_demissao = '1900-01-01' begin set @dt_demissao = @periodofim end
 
 		declare escalas cursor for
 			select E.escalfatorcargamensal, E.escalregime, FE.escalcodigo, FE.fuescdatainiciovigencia, FE.fuescdatamovimentacao from tbgabfuncionarioescala FE (nolock) 
@@ -91,7 +94,7 @@ BEGIN
 		begin
 			declare dias cursor for
 			select cartadiasemana,cartaflagferiado,ctococodigo from tbgabcartaodeponto (nolock) 
-			where funcicodigo = @funcicodigo and cartadatajornada between @periodoinicio and @periodofim
+			where funcicodigo = @funcicodigo and cartadatajornada between @periodoinicio and @periodofim and cartadatajornada between @dt_admissao and @dt_demissao
 		  
 			open dias
 				fetch next from dias into @diasemana, @feriado,@indicacao
@@ -123,7 +126,7 @@ BEGIN
 		begin
 			declare dias cursor for
 			select cartadiasemana,ctococodigo from tbgabcartaodeponto (nolock) 
-			where funcicodigo = @funcicodigo and cartadatajornada between @periodoinicio and @periodofim
+			where funcicodigo = @funcicodigo and cartadatajornada between @periodoinicio and @periodofim and cartadatajornada between @dt_admissao and @dt_demissao
 		  
 			open dias
 				fetch next from dias into @diasemana,@indicacao
@@ -155,7 +158,7 @@ BEGIN
 		-- SE VALOR DA CARGA HORÁRIA MENSAL FOR MENOR DO QUE 0 ENTÃO ZERA O PREVISTO MENSAL PARA EVITAR DE GERAR HORA EXTRA
 		if @previstomensal < 0 begin set @previstomensal = 0 end
 
-		insert into @tabela values ( @menor_fator,@menor_escala,@menor_regime,@dias_uteis,@previstomensal,@vigencia,@ult_movimentacao,@fatormensal,@afastamentosOuFerias)
+		insert into @tabela values ( @menor_fator,@menor_escala,@menor_regime,@dias_uteis,@previstomensal,@vigencia,@ult_movimentacao,@fatormensal,@afastamentosOuFerias,@dt_demissao)
 
 	RETURN 
 END
