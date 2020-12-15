@@ -72,7 +72,7 @@ BEGIN
 		set @m2 = 0
 
 		DECLARE semanas CURSOR FOR
-			select inicio_semana,fim_semana,case when (horadia-horaprevistaescala) > 0 then horadia-horaprevistaescala end,semana
+			select inicio_semana,fim_semana,case when (horadia-horaprevistasemanal) > 0 then horadia-horaprevistasemanal else 0 end,semana
 			from dbo.retornarApuracaoSemanal(@funcicodigo,@startDate,@endDate)
 		OPEN semanas
 		FETCH NEXT FROM semanas INTO @inicio_semana,@fim_semana,@minutos,@m4
@@ -84,26 +84,7 @@ BEGIN
 			-- CATEGORIA HORA EXTRA
 			if @categoria = 1
 			begin
-			/*
-				-- VERIFICA SE O VALOR RETORNADO ESTÁ DENTRO DA FAIXA
-				if @faixainicio < @minutos and @minutos <= @faixafim
-				begin
-					set @m2 = @minutos - @faixainicio
-				end
 
-				-- VERIFICA SE O VALOR NÃO ALCANÇA A FAIXA
-				else if @minutos <= @faixainicio
-				begin
-					set @m2 = 0
-				end
-
-				-- VERIFICA SE O VALOR ULTRAPASSA A FAIXA
-				else if @faixafim <= @minutos
-				begin
-					set @m2 = @faixafim - @faixainicio
-				end
-
-				set @minutos = @m2*/
 				-- SE HÁ VALOR A TOTALIZAR
 				if @minutos > 0
 				begin
@@ -119,80 +100,75 @@ BEGIN
 						insert into tbgabduplicados (funcicodigo,rotina_origem)
 						values (@funcicodigo,'spug_insereTotalizadoresSemanais')
 					end catch;
-					-- CARTÃO TOTALIZADOR HORA GARANTIDA
-					if @totalgarantia is not null and @totalgarantia > 0 and @minutos < @totalgarantia 
-					begin 
-						-- HORAS COMPLEMENTARARES DO TOTALIZADOR
-						set @complementar = @totalgarantia - @minutos
-						begin try
-							insert into tbgabcartaototalizador (funcicodigo,totalcodigo,rubricodigo,cartovaloracumulado,
-							cartomesbase,cartoanobase,cartovaloragrupamento,catcartocodigo,cartonumerosemana) values (
-							@funcicodigo,@totalcodigo,@totalrubricagarantido,@complementar,@mes,@ano,@valoragrupamento,12,@m4)
-						end try
-						begin catch
-							insert into tbgabduplicados (funcicodigo,rotina_origem)
-							values (@funcicodigo,'spug_insereTotalizadoresSemanais_HG')
-						end catch;
-						set @complementar = @totalgarantia
-					end
-					else
-					begin
-						set @complementar = @minutos
-					end
+                end
 
-					-- CARTÃO TOTALIZADOR BANCO DE HORAS (CRÉDITO)
-					if @totalcompensavel = 2 and @funcionariobh = 1
-					begin
-						-- TIPO DE COMPENSAÇÃO VALOR ABSOLUTO
-						if @tipocompensacao = 1
-						begin
-							-- VERIFICA SE O VALOR RETORNADO ESTÁ DENTRO DA FAIXA
-							if @totalabsolutoinicio < @complementar and @complementar <= @totalabsolutofim
-							begin
-								set @complementar = @complementar - @totalabsolutoinicio
-							end
-							-- VERIFICA SE O VALOR NÃO ALCANÇA A FAIXA
-							else if @complementar <= @totalabsolutoinicio
-							begin
-								set @complementar = 0
-							end
-							-- VERIFICA SE O VALOR ULTRAPASSA A FAIXA
-							else if @totalabsolutofim <= @complementar
-							begin
-								set @complementar = @totalabsolutofim - @totalabsolutoinicio
-							end
-						end
+                -- CARTÃO TOTALIZADOR HORA GARANTIDA
+                if @totalgarantia is not null and @minutos < @totalgarantia 
+                begin 
+                    -- HORAS COMPLEMENTARARES DO TOTALIZADOR
+                    set @complementar = @totalgarantia - @minutos
+                    begin try
+                        insert into tbgabcartaototalizador (funcicodigo,totalcodigo,rubricodigo,cartovaloracumulado,
+                        cartomesbase,cartoanobase,cartovaloragrupamento,catcartocodigo,cartonumerosemana) values (
+                        @funcicodigo,@totalcodigo,@totalrubricagarantido,@complementar,@mes,@ano,@valoragrupamento,12,@m4)
+                    end try
+                    begin catch
+                        insert into tbgabduplicados (funcicodigo,rotina_origem)
+                        values (@funcicodigo,'spug_insereTotalizadoresSemanais_HG')
+                    end catch;
+                    set @complementar = @totalgarantia
+                end
+                else
+                begin
+                    set @complementar = @minutos
+                end
 
-						-- TIPO DE COMPENSAÇÃO VALOR PROPORCIONAL
-						else if @tipocompensacao = 2
-						begin
-							set @totalproporcionalvalor = @totalproporcionalvalor / 100 
-							set @complementar = @complementar * @totalproporcionalvalor
-						end
+                -- CARTÃO TOTALIZADOR BANCO DE HORAS (CRÉDITO)
+                if @totalcompensavel = 2 and @funcionariobh = 1 and @minutos > 0
+                begin
+                    -- TIPO DE COMPENSAÇÃO VALOR ABSOLUTO
+                    if @tipocompensacao = 1
+                    begin
+                        -- VERIFICA SE O VALOR RETORNADO ESTÁ DENTRO DA FAIXA
+                        if @totalabsolutoinicio < @complementar and @complementar <= @totalabsolutofim
+                        begin
+                            set @complementar = @complementar - @totalabsolutoinicio
+                        end
+                        -- VERIFICA SE O VALOR NÃO ALCANÇA A FAIXA
+                        else if @complementar <= @totalabsolutoinicio
+                        begin
+                            set @complementar = 0
+                        end
+                        -- VERIFICA SE O VALOR ULTRAPASSA A FAIXA
+                        else if @totalabsolutofim <= @complementar
+                        begin
+                            set @complementar = @totalabsolutofim - @totalabsolutoinicio
+                        end
+                    end
 
-						-- SE HÁ VALOR A SER COMPENSADO EM BANCO DE HORAS
-						if @complementar > 0
-						begin
-							set @complementar = @complementar * @totalfatorcompensacao
-							-- INSERE CARTÃO TOTALIZADOR
-							begin try
-								insert into tbgabcartaototalizador (funcicodigo,totalcodigo,rubricodigo,cartovaloracumulado,
-								cartomesbase,cartoanobase,cartovaloragrupamento,catcartocodigo,cartonumerosemana) values (
-								@funcicodigo,@totalcodigo,0,@complementar,@mes,@ano,@totalfatorcompensacao,13,@m4)
-							end try
-							begin catch
-								insert into tbgabduplicados (funcicodigo,rotina_origem)
-								values (@funcicodigo,'spug_insereTotalizadoresSemanais_BH')
-							end catch;
-						end
-					end
-				end
+                    -- TIPO DE COMPENSAÇÃO VALOR PROPORCIONAL
+                    else if @tipocompensacao = 2
+                    begin
+                        set @totalproporcionalvalor = @totalproporcionalvalor / 100 
+                        set @complementar = @complementar * @totalproporcionalvalor
+                    end
 
-				-- SE NÃO HÁ VALOR A TOTALIZAR, DELETA POR SEGURANÇA
-				else
-				begin
-					delete from tbgabcartaototalizador where funcicodigo = @funcicodigo and totalcodigo = @totalcodigo and cartomesbase = @mes and cartoanobase = @ano and cartonumerosemana = @m4
-				end
+                    -- SE HÁ VALOR A SER COMPENSADO EM BANCO DE HORAS
+                    if @complementar > 0
+                    begin
+                        set @complementar = @complementar * @totalfatorcompensacao
+                        -- INSERE CARTÃO TOTALIZADOR
+                        begin try
+                            insert into tbgabcartaototalizador (funcicodigo,totalcodigo,rubricodigo,cartovaloracumulado,
+                            cartomesbase,cartoanobase,cartovaloragrupamento,catcartocodigo,cartonumerosemana) values (
+                            @funcicodigo,@totalcodigo,0,@complementar,@mes,@ano,@totalfatorcompensacao,13,@m4)
+                        end try
+                        begin catch
+                            insert into tbgabduplicados (funcicodigo,rotina_origem)
+                            values (@funcicodigo,'spug_insereTotalizadoresSemanais_BH')
+                        end catch;
+                    end
+                end
 			end -- END if @categoria = 1	
 
 		FETCH NEXT FROM semanas INTO @inicio_semana,@fim_semana,@minutos,@m4 END
